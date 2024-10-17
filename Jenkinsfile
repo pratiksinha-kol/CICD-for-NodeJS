@@ -43,12 +43,13 @@ pipeline {
 			}
 		}
 		
-		stage('Docker Image')
+		stage('Docker Image') {
 			steps {
 				script {
 					docker.build("${DOCKER_HUB_REPO}:latest")
 				}
 			}
+		}	
 		/*
 		stage('Docker Image'){
 			steps {
