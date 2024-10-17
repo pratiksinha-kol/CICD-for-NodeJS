@@ -1,9 +1,11 @@
 pipeline {
 	agent any
-	/*
+	
 	tools {
 		nodejs 'NodeJS'
 	}
+
+	/*
 	environment {
 		SONAR_PROJECT_KEY = 'complete-cicd-02'
 		SONAR_SCANNER_HOME = tool 'SonarQubeScanner'
@@ -17,18 +19,19 @@ pipeline {
 	}
 	*/
 	stages {
-		stage('GitHub'){
+		stage('GitHub Checkout'){
 			steps {
 				git branch: 'main', credentialsId: 'git-cred', url: 'https://github.com/pratiksinha-kol/CICD-for-NodeJS.git'
 			}
 		}
-/*		
+		
 		stage('Unit Test'){
 			steps {
 				sh 'npm test'
 				sh 'npm install'		
 			}
 		}
+/*		
 		stage('SonarQube Analysis'){
 			steps {
 				withCredentials([string(credentialsId: 'complete-cicd-02-token', variable: 'SONAR_TOKEN')]) {
