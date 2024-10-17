@@ -11,6 +11,9 @@ pipeline {
 		SONAR_SCANNER_HOME = tool 'SonarQubeScanner'
 		DOCKER_HUB_REPO = 'pratiksinha20/cicd-project-1'
 		JOB_NAME_NOW = 'cicd02'
+		ECR_REGISTRY = '008971654660.dkr.ecr.us-east-1.amazonaws.com'
+		ECR_REPO = 'pratikrepo'
+		IMAGE_TAG = 'latest'
 	}
 	
 	stages {
@@ -44,14 +47,17 @@ pipeline {
 			}
 		}
 		
+		/* OLD VERSION TO BUILD DOCKER IMAGE
 		stage('Docker Image') {
 			steps {
 				script {
 					docker.build("${JOB_NAME_NOW}:latest")
 				}
 			}
-		}	
-		/*
+		}
+		*/	
+		
+		// New Version of Docker Image Build
 		stage('Docker Image'){
 			steps {
 				script {
@@ -59,28 +65,28 @@ pipeline {
 				}
 			}
 		}
-		*/
+		
 		
 		stage('Trivy Scan'){
 			steps {
 				sh 'trivy --severity HIGH,CRITICAL --no-progress --format table -o trivy-report.html image ${JOB_NAME_NOW}:latest'
 			}
 		}
-		/*
+		
 		stage('Login to ECR'){
 			steps {
 				sh """
-				aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 358966077154.dkr.ecr.us-east-1.amazonaws.com
+				aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 008971654660.dkr.ecr.us-east-1.amazonaws.com
 				"""
 			}
 		}
+		
 		stage('Push Image to ECR'){
 			steps {
 				script {
 				docker.image("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}").push()
 				}
 			}
-		}
-	*/	
+		}	
 	}	
 }
