@@ -1,5 +1,6 @@
 pipeline {
 	agent any
+	/*
 	tools {
 		nodejs 'NodeJS'
 	}
@@ -14,12 +15,14 @@ pipeline {
 		ECS_SERVICE = 'iquant-ecs-svc'
 		ALB_TARGET_GROUP_ARN = 'ecs-iquant-svc-tg'
 	}
+	*/
 	stages {
 		stage('GitHub'){
 			steps {
-				git branch: 'main', credentialsId: 'jen-git-dind', url: 'https://github.com/iQuantC/Complete_CICD_02.git'
+				git branch: 'main', credentialsId: 'git-cred', url: 'https://github.com/pratiksinha-kol/CICD-for-NodeJS.git'
 			}
 		}
+/*		
 		stage('Unit Test'){
 			steps {
 				sh 'npm test'
@@ -69,4 +72,5 @@ pipeline {
 			}
 		}
 	}
+*/	
 }
