@@ -1,10 +1,18 @@
-# CICD for NodeJS
 
-### Main Server
+# CI/CD for NodeJS
 
-#### Ensure that you have installed AWS CLI, Terraform, Docker Engine and kubectl on the server.  
+### Main Server Setup
 
-1. **Run Docker using the given command:**
+#### Prerequisites:
+Ensure that you have installed the following on your server/local machine:
+- **AWS CLI**
+- **Terraform**
+- **Docker Engine**
+- **kubectl**
+
+### Steps
+
+#### 1. Run Docker using the following command:
 ```sh
 docker run -d --name jenkins-dind \
     -p 8080:8080 -p 50000:50000 \
@@ -14,7 +22,7 @@ docker run -d --name jenkins-dind \
     jenkins/jenkins:lts
 ```
 
-2. **Exec into the pod and run the following command:**
+#### 2. Exec into the container and run:
 ```sh
 docker exec -it DOCKER_PROCESS bash
 
@@ -22,20 +30,19 @@ groupadd -for -g $DOCKER_GID docker
 usermod -aG docker jenkins
 ```
 
-3. Setup Jenkins on ***localhost:8080*** must be complete now. Configure the Jenkins server and add NodeJS plugin to use.
+#### 3. Setup Jenkins on **localhost:8080**. Configure the Jenkins server and install the **NodeJS** plugin.
 
-4. **Restart Docker from CLI, not from the GUI:**
+#### 4. Restart Docker from CLI:
 ```sh
 docker restart jenkins-dind
 ```
 
-5. **Under Manage Jenkins:**
+#### 5. Under **Manage Jenkins**:
+Navigate to **Tools** → **NodeJS Installations**. Set the **Name** & **Version** (Name should match the one used in the Jenkinsfile tool section).
 
- - Navigate to **Tools** → **NodeJS Installations**
+### SonarQube Setup
 
- - Set the **Name & Version** (Name should be the same as used in Jenkinsfile tool section)
-
-6. **Find SonarQube on Docker Hub** and ensure "Docker Host Requirements" are fulfilled. Run the commands:
+#### 6. Find SonarQube on Docker Hub and fulfill the "Docker Host Requirements" by running:
 ```sh
 sysctl -w vm.max_map_count=524288
 sysctl -w fs.file-max=131072
@@ -43,125 +50,119 @@ ulimit -n 131072
 ulimit -u 8192
 ```
 
-7. **Run SonarQube as Docker:**
+#### 7. Run SonarQube as a Docker container:
 ```sh
 docker run -d --name sonarqube-dind \
     -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
     -p 9000:9000 sonarqube:latest
 ```
 
-8. **Default SonarQube credentials:**
+#### 8. SonarQube default credentials:
+- **Username:** admin
+- **Password:** admin
 
-  - **Default Username:** admin
+Change the password to `Sonarqube@123`. Install the **Sonarqube Scanner** and **Sonar Quality Gates** plugins on Jenkins.
 
-  - **Default Password:** admin
+#### 9. On the SonarQube webpage:
+- Create a local project.
+- Provide "Project display name" and "Project Key".
+- Go to **Global Settings**.
 
-Change password to _Sonarqube@123_. Install **"Sonarqube Scanner"** and **"Sonar Quality Gates"** plugin on Jenkins.
+#### 10. Create a SonarQube token:
+Generate a token of type **Global Analysis Token**. Example:
+```
+sqa_6zxcvbb59ad051e32589676b877f83c8a32574305
+```
 
-9. **On SonarQube webpage:**
+#### 11. Add Credentials in Jenkins:
+In Jenkins, add credentials for SonarQube as **secret text**, and name it as `cicd-project-token`.
 
-  - Create a local project
+#### 12. Configure SonarQube in Jenkins:
+- Go to **Manage Jenkins** → **System** → **SonarQube servers**.
+- Set **Name**, **Server URL**, and the **Authentication token**.
 
-  - Provide "Project display name" and "Project Key"
+#### 13. Configure the SonarQube Scanner in Jenkins:
+- Go to **Manage Jenkins** → **Tools** → **SonarQube Scanner installations**.
+- Set **Name** as `SonarQubeScanner` and save.
 
-  - Go to Global Settings
+#### 14. Networking Between Jenkins and SonarQube:
+Since Jenkins and SonarQube containers are not on the same network, create a Docker network:
+```sh
+docker network create dind-network
+docker network connect dind-network jenkins-dind
+docker network connect dind-network sonarqube-dind
+```
 
-10. **Create a SonarQube token** of type "Global Analysis Token":
-
-    _Token example: sqa_6zxcvbb59ad051e32589676b877f83c8a32574305_
-
-11. **Add Credentials on Jenkins** for SonarQube as "secret text" and name it as _cicd-project-token_
-
-12. **Go to Manage Jenkins:**
-
-  - System → SonarQube servers
-
-  - Set Name (SonarQube), Server URL, and Authentication token.
-
-13. **Go to Manage Jenkins:**
-
-  - Tools → SonarQube Scanner installations
-
-  - Set Name (SonarQubeScanner) → Save & Apply.
-
-14. Since, Jenkins and SonarQube containers are **NOT** on the **same network**, it will create a issue with the pipeline.
-
-    **Create Docker network for Jenkins and SonarQube:**
-    ```sh
-    docker network create dind-network
-    docker network connect dind-network jenkins-dind
-    docker network connect dind-network sonarqube-dind
-    ```
-    Confirm if they are in the same network :-->
-    
-    Login into Jenkins container to ping SonarQube server to ensure they are in the same network:
-    ```sh
-    apt-get update
-    apt install iputils-ping
-    docker exec -it jenkins-dind ping sonarqube-dind
-    ```
+Verify they are in the same network by pinging the SonarQube server from the Jenkins container:
+```sh
+apt-get update
+apt install iputils-ping
+docker exec -it jenkins-dind ping sonarqube-dind
+```
 
 ### Docker Image Build
 
-1. **Install Docker Pipeline, Docker, and Docker API Plugins** on Jenkins server/docker.
+#### 1. Install Docker Pipeline, Docker, and Docker API Plugins on Jenkins.
 
-2. On Docker Hub, create a repo named **CICD-Project-1** and ensure it is public.
+#### 2. Create a Docker Hub repository:
+Create a repo on Docker Hub named **CICD-Project-1** and ensure it's public.
 
-3. Update the **[Jenkinsfile](Jenkinsfile)** and build the project.
+#### 3. Update the Jenkinsfile and build the project.
 
-4. **Install Trivy on Jenkins server** for image scanning:
+#### 4. Install Trivy for image scanning:
+Install Trivy on Jenkins by running:
+```sh
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
+```
 
-   ```sh
-   curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
-   ```
+Restart Jenkins after installing Trivy:
+```sh
+docker restart jenkins-dind
+```
 
-  Restart the container after installing Trivy:
-  ```sh
-  docker restart jenkins-dind
-  ```
+Update the Jenkinsfile and build the pipeline again.
 
-  Update the [Jenkinsfile](Jenkinsfile) and build the pipeline again.
+### Pushing the Docker Image to ECR:
 
-### Push Image to ECR:
-
-1. **Install AWS CLI on Jenkins Docker:**
-
+#### 1. Install AWS CLI on the Jenkins Docker container:
 ```sh
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 sudo ./aws/install
 ```
 
-2. **Create IAM user with EC2 Registry full access and get the access key:**
+#### 2. Create an IAM user with ECR full access and retrieve the access key:
+- **AWS Access Key ID:** AKIAEXAMPLESEE
+- **AWS Secret Access Key:** a$secret6E7EqCMAccess3ZbKey6gXXXXcs9w/0f
+- **Default region name:** us-east-x
 
-  - AWS Access Key ID: AKIAEXAMPLESEE
-
-  - AWS Secret Access Key: a$secret6E7EqCMAccess3ZbKey6gXXXXcs9w/0f
-
-  - Default region name: us-east-x
-
-3. **Go to ECR, create a repo** and get the URI: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/name_of_repo. Fetch the push command:
+#### 3. Create an ECR repository and get the URI:
 ```sh
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 ```
+Create ECS Cluster using [Terraform](https://github.com/pratiksinha-kol/EKS-with-Terraform). 
 
-4. Add the given plugins --> **"AWS ECR Plugin", "AWS SDK: ALL"** on Jenkins server.
+#### 4. Add AWS Plugins to Jenkins:
+Install **AWS ECR Plugin** and **AWS SDK: ALL** in Jenkins.
 
-5. Under **Credentials**, select AWS Credentials and configure the access keys.
+#### 5. Configure AWS Credentials in Jenkins.
 
-6. Update the Jenkinsfile with variables `REPO_NAME=name_of_repo`, `REPO_REGISTRY`, `IMAGE_TAG`, and build the pipeline.
+#### 6. Update the Jenkinsfile:
+Set `REPO_NAME=name_of_repo`, `REPO_REGISTRY`, and `IMAGE_TAG`, then build the pipeline.
 
-7. **Create ECS Cluster** to deploy the application with the image built.
+### Deploying the Application to ECS:
 
-8. Configure **task definition** for the ECS cluster, use the `ECR_IMAGE URI`. The application listens on port 3000, so set the container port to 3000.
+#### 1. Create an ECS Cluster and deploy the Docker image.
 
-9. **Create ECS Service:**
+#### 2. Configure the ECS Task Definition:
+Use the `ECR_IMAGE_URI`. The application listens on port 3000, so configure the container port to 3000.
 
-  - Go back to the ECS cluster
+#### 3. Create an ECS Service:
+- Create a new security group (open ports 80, 3000) and a new ALB.
+- For the health check, use `/hello`.
 
-  - In the service, create a new security group (open port 80, 3000) and new ALB
-
-  - In the health check, use `/hello`
-
-10. Confirm using `DNS_NAME/hello`
-
+#### 4. Confirm the deployment:
+Access the application via:
+```
+DNS_NAME/hello
+```
